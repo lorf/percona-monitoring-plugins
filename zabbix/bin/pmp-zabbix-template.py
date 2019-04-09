@@ -20,7 +20,7 @@ if VERSION < 2.6:
     sys.exit(1)
 
 # Constants
-ZABBIX_VERSION = '2.0'
+ZABBIX_VERSION = '3.4'
 ZABBIX_SCRIPT_PATH = '/var/lib/zabbix/percona/scripts'
 DEFINITION = 'cacti/definitions/mysql.def'
 PHP_SCRIPT = 'cacti/scripts/ss_get_mysql_stats.php'
@@ -123,7 +123,7 @@ tmpl = dict()
 app_name = data['name'].split()[0]
 tmpl_name = 'Percona %s Template' % data['name']
 tmpl['version'] = ZABBIX_VERSION
-tmpl['date'] = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime())
+tmpl['date'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
 tmpl['groups'] = {'group': {'name': 'Percona Templates'}}
 tmpl['screens'] = {'screen': {'name': '%s Graphs' % app_name,
                               'hsize': 2,
@@ -151,18 +151,20 @@ for graph in data['graphs']:
     z_graph = {'name': graph['name'],
                'width': 900,
                'height': 200,
-               'graphtype': graph_types['Normal'],
+               'type': graph_types['Normal'],
                'show_legend': 1,
                'show_work_period': 1,
                'show_triggers': 1,
-               'ymin_type': 0,  # Calculated
-               'ymax_type': 0,  # Calculated
+               'ymin_type_1': 0,  # Calculated
+               'ymax_type_1': 0,  # Calculated
                'ymin_item_1': 0,
                'ymax_item_1': 0,
                'show_3d': 0,
                'percent_left': '0.00',
                'percent_right': '0.00',
-               'graph_items': {'graph_item': []}}
+               'graph_items': {'graph_item': []},
+               'yaxismin': 0.,
+               'yaxismax': 100.}
 
     # Populate graph items
     multipliers = dict()
@@ -207,7 +209,11 @@ for graph in data['graphs']:
                      'y': y,
                      'dynamic': 1,
                      'resource': {'name': graph['name'],
-                                  'host': tmpl_name}}
+                                  'host': tmpl_name},
+                     'elements': 25,
+                     'style': 0,
+                     'sort_triggers': 0,
+                     'url': ''}
     tmpl['screens']['screen']['screen_items']['screen_item'].append(z_screen_item)
     tmpl['templates']['template']['screens'] = tmpl['screens']
     if x == 0:
@@ -247,7 +253,25 @@ for graph in data['graphs']:
                       'description': '%s %s' % (app_name, name),
                       'multiplier': multipliers[item][0],
                       'formula': multipliers[item][1],
-                      'status': 0}
+                      'status': 0,
+                      'snmp_community': '',
+                      'snmp_oid': '',
+                      'allowed_hosts': '',
+                      'snmpv3_securityname': '',
+                      'snmpv3_securitylevel': 0,
+                      'snmpv3_authpassphrase': '',
+                      'snmpv3_privpassphrase': '',
+                      'delay_flex': '',
+                      'params': '',
+                      'ipmi_sensor': '',
+                      'authtype': 0,
+                      'username': '',
+                      'password': '',
+                      'publickey': '',
+                      'privatekey': '',
+                      'port': '',
+                      'inventory_link': 0,
+                      'valuemap': ''}
             tmpl['templates']['template']['items']['item'].append(z_item)
             all_item_keys.add(item)
 
@@ -270,7 +294,28 @@ if output == 'xml':
                   'delta': 0,  # As is
                   'applications': {'application': {'name': app_name }},
                   'description': item['name'],
-                  'status': 0}
+                  'status': 0,
+                  'multiplier': 0,
+                  'formula': 1,
+                  'units': '',
+                  'snmp_community': '',
+                  'snmp_oid': '',
+                  'allowed_hosts': '',
+                  'snmpv3_securityname': '',
+                  'snmpv3_securitylevel': 0,
+                  'snmpv3_authpassphrase': '',
+                  'snmpv3_privpassphrase': '',
+                  'delay_flex': '',
+                  'params': '',
+                  'ipmi_sensor': '',
+                  'authtype': 0,
+                  'username': '',
+                  'password': '',
+                  'publickey': '',
+                  'privatekey': '',
+                  'port': '',
+                  'inventory_link': 0,
+                  'valuemap': ''}
         tmpl['templates']['template']['items']['item'].append(z_item)
 
     # Read triggers from YAML file
@@ -286,7 +331,10 @@ if output == 'xml':
                      'expression': trigger['expression'].replace('TEMPLATE', tmpl_name),
                      'priority': trigger_severities[trigger.get('severity', 'Not_classified')],
                      'status': 0,  # Enabled
-                     'dependencies': ''}
+                     'dependencies': '',
+                     'url': '',
+                     'description': '',
+                     'type': 0}
         # Populate trigger dependencies
         if trigger.get('dependencies'):
             z_trigger['dependencies'] = {'dependency': []}
